@@ -93,6 +93,7 @@ app.post('/webhook', function (req, res) {
 
       // Iterate over each messaging event
       pageEntry.messaging.forEach(function(messagingEvent) {
+        console.log(messagingEvent);
         if (messagingEvent.optin) {
           receivedAuthentication(messagingEvent);
         } else if (messagingEvent.message) {
@@ -358,12 +359,74 @@ function receivedPostback(event) {
   // button for Structured Messages.
   var payload = event.postback.payload;
 
-  console.log("Received postback for user %d and page %d with payload '%s' " +
-    "at %d", senderID, recipientID, payload, timeOfPostback);
+  switch (payload) {
+    case 'GET_STARTED':
+      sendCityRequest(senderID);
+      break;
 
-  // When a postback is called, we'll send a message back to the sender to
-  // let them know it was successful
-  sendTextMessage(senderID, "Postback called");
+    case 'ACTIVE_CITY':
+      sendLocationRequest(senderID);
+      break;
+
+    case 'INACTIVE_CITY':
+      sendTextMessage(senderID, "Sorry, you are not located in one" +
+        "of our active cities");
+
+  }
+
+}
+
+function sendCityRequest(recipientId) {
+  var messageData = {
+    recipient: {
+      id: recipientId
+    },
+    message: {
+      text: "Which city are you located in?",
+      quick_replies: [
+        {
+          content_type: "text",
+          title: "San Francisco",
+          payload: "ACTIVE_CITY"
+        },
+        {
+          content_type: "text",
+          title: "Boston",
+          payload:"ACTIVE_CITY"
+        },
+        {
+          content_type: "text",
+          title: "San Diego",
+          payload:"ACTIVE_CITY"
+        },
+        {
+          content_type: "text",
+          title: "Other",
+          payload:"INACTIVE_CITY"
+        }
+      ]
+    }
+  };
+
+  callSendAPI(messageData);
+}
+
+function sendLocationRequest(recipientId) {
+  var messageData = {
+    recipient: {
+      id: recipientId
+    },
+    message: {
+      text: "Which city are you located in?",
+      quick_replies: [
+        {
+          content_type: "location",
+        }
+      ]
+    }
+  };
+
+  callSendAPI(messageData);
 }
 
 /*
@@ -807,7 +870,7 @@ function callSendAPI(messageData) {
     uri: 'https://graph.facebook.com/v2.6/me/messages',
     qs: { access_token: PAGE_ACCESS_TOKEN },
     method: 'POST',
-    json: 'hola'
+    json: messageData
 
   }, function (error, response, body) {
     if (!error && response.statusCode == 200) {
