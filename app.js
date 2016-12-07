@@ -19,7 +19,7 @@ const
   request = require('request');
 
 var app = express();
-app.set('port', process.env.PORT || 5000);
+app.set('port', process.env.PORT || 8080);
 app.set('view engine', 'ejs');
 app.use(bodyParser.json({ verify: verifyRequestSignature }));
 app.use(express.static('public'));
@@ -807,7 +807,7 @@ function callSendAPI(messageData) {
     uri: 'https://graph.facebook.com/v2.6/me/messages',
     qs: { access_token: PAGE_ACCESS_TOKEN },
     method: 'POST',
-    json: messageData
+    json: 'hola'
 
   }, function (error, response, body) {
     if (!error && response.statusCode == 200) {
