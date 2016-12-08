@@ -243,10 +243,14 @@ function receivedMessage(event) {
     return;
   } else if (quickReply) {
     var quickReplyPayload = quickReply.payload;
-    console.log("Quick reply for message %s with payload %s",
-      messageId, quickReplyPayload);
 
-    sendTextMessage(senderID, "Quick reply tapped");
+    if (quickReplyPayload === 'ACTIVE_CITY') {
+      sendLocationRequest(senderID);
+    } else if (quickReplyPayload === 'INACTIVE_CITY') {
+      sendTextMessage(senderID, "Sorry, you are not located in one" +
+        "of our active cities");
+    }
+
     return;
   }
 
@@ -359,19 +363,8 @@ function receivedPostback(event) {
   // button for Structured Messages.
   var payload = event.postback.payload;
 
-  switch (payload) {
-    case 'GET_STARTED':
+  if (payload === 'GET_STARTED') {
       sendCityRequest(senderID);
-      break;
-
-    case 'ACTIVE_CITY':
-      sendLocationRequest(senderID);
-      break;
-
-    case 'INACTIVE_CITY':
-      sendTextMessage(senderID, "Sorry, you are not located in one" +
-        "of our active cities");
-
   }
 
 }
@@ -417,7 +410,7 @@ function sendLocationRequest(recipientId) {
       id: recipientId
     },
     message: {
-      text: "Which city are you located in?",
+      text: "Share your location, so I can give you your first clue.",
       quick_replies: [
         {
           content_type: "location",
