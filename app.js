@@ -461,7 +461,7 @@ function sendClueReadyRequest(recipientId) {
       id: recipientId
     },
     message: {
-      text: "You made it? Are you sure you're ready for the clues.",
+      text: "You made it? Are you sure you're ready for the clues?",
       quick_replies: [
         {
           content_type: "text",
