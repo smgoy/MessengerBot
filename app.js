@@ -310,17 +310,25 @@ function receivedMessage(event) {
       default:
         sendTextMessage(senderID, "I'm not quite sure what that means");
         sendCityRequest(senderID);
+    }
 
     return;
   }
 
   if (messageText) {
+
     if (!PROGRESS.city) {
       sendTextMessage(senderID, "I need to know which city you're in to " +
         "get started");
       sendCityRequest(senderID);
+    } else if (!PROGRESS.coordinates) {
+      sendTextMessage(senderID, "I am going to need to know your location " +
+        "so I can send you to the closest prize location");
+      sendLocationRequest(senderID);
+    } else if (!PROGRESS.receivedClues) {
+      sendClueReadyRequest(senderID);
     }
-    sendTextMessage(senderID, messageText);
+
   } else if (messageAttachments) {
     processLocation(senderID, messageAttachments);
     updateProgress('coordinates', true);
@@ -445,6 +453,31 @@ function processLocation(senderID, messageAttachments) {
   });
   sendTextMessage(senderID, `Head to ${prizeLocation} and let me know ` +
     "when you arrive so I can give you a set of clues.");
+}
+
+function sendClueReadyRequest(recipientId) {
+  var messageData = {
+    recipient: {
+      id: recipientId
+    },
+    message: {
+      text: "You made it? Are you sure you're ready for the clues.",
+      quick_replies: [
+        {
+          content_type: "text",
+          title: "Yes",
+          payload: "READY_FOR_CLUE"
+        },
+        {
+          content_type: "text",
+          title: "No",
+          payload:"NOT_READY_FOR_CLUE"
+        },
+      ]
+    }
+  };
+
+  callSendAPI(messageData);
 }
 
 /*
