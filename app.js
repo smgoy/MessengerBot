@@ -16,7 +16,9 @@ const
   crypto = require('crypto'),
   express = require('express'),
   https = require('https'),
-  request = require('request');
+  request = require('request'),
+  geolib = require('geolib');
+
 
 var app = express();
 app.set('port', process.env.PORT || 8080);
@@ -71,6 +73,27 @@ app.get('/webhook', function(req, res) {
     res.sendStatus(403);
   }
 });
+
+const PRIZE_LOCATIONS = {
+  sanFrancisco: [
+    {
+      id: 1,
+      name: 'Golden Gate',
+      coordinates: {
+        lat: 37.7694,
+        long: -122.4862
+      }
+    },
+    {
+      id: 2,
+      name: 'Presidio',
+      coordinates: {
+        lat: 37.7989,
+        long: -122.4662
+      }
+    }
+  ]
+};
 
 
 /*
@@ -316,7 +339,7 @@ function receivedMessage(event) {
         sendTextMessage(senderID, messageText);
     }
   } else if (messageAttachments) {
-    sendTextMessage(senderID, "Message with attachment received");
+    processLocation(senderID, messageAttachments);
   }
 }
 
@@ -420,6 +443,18 @@ function sendLocationRequest(recipientId) {
   };
 
   callSendAPI(messageData);
+}
+
+function processLocation(senderID, messageAttachments) {
+  var lat = messageAttachments[0].payload.coordinates.lat;
+  var long = messageAttachments[0].payload.coordinates.long;
+  PRIZE_LOCATIONS.sanFrancisco.forEach(loc => {
+    var distance = geolib.getDistance(
+      {latitude: lat, longitude: long},
+      {latitude: loc.coordinates.lat, longitude: loc.coordinates.long}
+    );
+    sendTextMessage(senderID, distance);
+  });
 }
 
 /*
