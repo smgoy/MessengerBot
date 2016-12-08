@@ -285,79 +285,45 @@ function receivedMessage(event) {
   } else if (quickReply) {
     var quickReplyPayload = quickReply.payload;
 
-    if (quickReplyPayload === 'ACTIVE_CITY') {
-      sendLocationRequest(senderID);
-    } else if (quickReplyPayload === 'INACTIVE_CITY') {
-      sendTextMessage(senderID, "Sorry, you are not located in one" +
-        "of our active cities");
-    }
+    switch (quickReplyPayload) {
+      case 'SAN_FRANCISCO':
+        sendLocationRequest(senderID);
+        updateProgress('city', 'sanFrancisco');
+        break;
+
+      case 'BOSTON':
+        sendLocationRequest(senderID);
+        updateProgress('city', 'boston');
+        break;
+
+      case 'SAN_DIEGO':
+        sendLocationRequest(senderID);
+        updateProgress('city', 'sanDiego');
+        break;
+
+      case 'OTHER':
+        sendTextMessage(senderID, "Sorry, you are not located in one" +
+          "of our active cities");
+        updateProgress('city', 'other');
+        break;
+
+      default:
+        sendTextMessage(senderID, "I'm not quite sure what that means");
+        sendCityRequest(senderID);
 
     return;
   }
 
   if (messageText) {
-
-    // If we receive a text message, check to see if it matches any special
-    // keywords and send back the corresponding example. Otherwise, just echo
-    // the text we received.
-    switch (messageText) {
-      case 'image':
-        sendImageMessage(senderID);
-        break;
-
-      case 'gif':
-        sendGifMessage(senderID);
-        break;
-
-      case 'audio':
-        sendAudioMessage(senderID);
-        break;
-
-      case 'video':
-        sendVideoMessage(senderID);
-        break;
-
-      case 'file':
-        sendFileMessage(senderID);
-        break;
-
-      case 'button':
-        sendButtonMessage(senderID);
-        break;
-
-      case 'generic':
-        sendGenericMessage(senderID);
-        break;
-
-      case 'receipt':
-        sendReceiptMessage(senderID);
-        break;
-
-      case 'quick reply':
-        sendQuickReply(senderID);
-        break;
-
-      case 'read receipt':
-        sendReadReceipt(senderID);
-        break;
-
-      case 'typing on':
-        sendTypingOn(senderID);
-        break;
-
-      case 'typing off':
-        sendTypingOff(senderID);
-        break;
-
-      case 'account linking':
-        sendAccountLinking(senderID);
-        break;
-
-      default:
-        sendTextMessage(senderID, messageText);
+    if (!PROGRESS.city) {
+      sendTextMessage(senderID, "I need to know which city you're in to " +
+        "get started");
+      sendCityRequest(senderID);
     }
+    sendTextMessage(senderID, messageText);
   } else if (messageAttachments) {
     processLocation(senderID, messageAttachments);
+    updateProgress('coordinates', true);
   }
 }
 
@@ -421,22 +387,22 @@ function sendCityRequest(recipientId) {
         {
           content_type: "text",
           title: "San Francisco",
-          payload: "ACTIVE_CITY"
+          payload: "SAN_FRANCISCO"
         },
         {
           content_type: "text",
           title: "Boston",
-          payload:"ACTIVE_CITY"
+          payload:"BOSTON"
         },
         {
           content_type: "text",
           title: "San Diego",
-          payload:"ACTIVE_CITY"
+          payload:"SAN_DIEGO"
         },
         {
           content_type: "text",
           title: "Other",
-          payload:"INACTIVE_CITY"
+          payload:"OTHER"
         }
       ]
     }
