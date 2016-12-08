@@ -95,6 +95,24 @@ const PRIZE_LOCATIONS = {
   ]
 };
 
+const PROGRESS = {
+  city: null,
+  coordinates: false,
+  receivedClues: false,
+  foundPrize: false
+};
+
+function updateProgress(key, value) {
+  PROGRESS[key] = value;
+}
+
+function resetProgress() {
+  PROGRESS.city = null;
+  PROGRESS.coordinates = false;
+  PROGRESS.receivedClues = false;
+  PROGRESS.foundPrize = false;
+}
+
 
 /*
  * All callbacks for Messenger are POST-ed. They will be sent to the same
@@ -448,13 +466,19 @@ function sendLocationRequest(recipientId) {
 function processLocation(senderID, messageAttachments) {
   var lat = messageAttachments[0].payload.coordinates.lat;
   var long = messageAttachments[0].payload.coordinates.long;
+  var minDistance;
+  var prizeLocation;
   PRIZE_LOCATIONS.sanFrancisco.forEach(loc => {
     var distance = geolib.getDistance(
       {latitude: lat, longitude: long},
       {latitude: loc.coordinates.lat, longitude: loc.coordinates.long}
     );
-    sendTextMessage(senderID, distance);
+    minDistance = minDistance || distance;
+    prizeLocation = prizeLocation || loc.name;
+    if (minDistance > distance) prizeLocation = loc.name;
   });
+  sendTextMessage(senderID, `Head to ${prizeLocation} and let me know ` +
+    "when you arrive so I can give you a set of clues.");
 }
 
 /*
