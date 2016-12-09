@@ -326,6 +326,12 @@ function receivedMessage(event) {
           "me know when you're ready for your clue.");
         break;
 
+      case "RESTART":
+        sendTextMessage(senderID, "Okay, I've restarted your progress. " +
+          "Let me know when you're ready to start again.");
+        resetProgress();
+        break;
+
       default:
         sendTextMessage(senderID, "I'm not quite sure what that means");
         sendCityRequest(senderID);
@@ -342,7 +348,7 @@ function receivedMessage(event) {
           clueArray = prizeLocation.clues;
       });
 
-    if (messageText.includes('start over')) {
+    if (messageText.toLowerCase().includes('start over')) {
       sendRestartConfermation(senderID);
     } else if (!PROGRESS.city) {
       var preText = "I need to know which city you're in to get started.";
@@ -570,6 +576,8 @@ function sendRestartConfermation(recipientId) {
       ]
     }
   };
+
+  callSendAPI(messageData);
 }
 
 function sendClues(recipientId) {
