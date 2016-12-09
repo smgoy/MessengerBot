@@ -12,9 +12,7 @@ const
 
 var app = express();
 app.set('port', process.env.PORT || 8080);
-// app.set('view engine', 'ejs');
 app.use(bodyParser.json({ verify: verifyRequestSignature }));
-// app.use(express.static('public'));
 
 const APP_SECRET = (process.env.MESSENGER_APP_SECRET) ?
   process.env.MESSENGER_APP_SECRET :
@@ -185,6 +183,15 @@ function receivedMessage(event) {
     var quickReplyPayload = quickReply.payload;
 
     switch (quickReplyPayload) {
+      case 'START':
+        sendCityRequest(senderID);
+        break;
+
+      case 'HOLD_OFF':
+        sendTextMessage(senderID, "Just let me know when you're ready " +
+          "to get started.");
+        break;
+
       case 'SAN_FRANCISCO':
         sendLocationRequest(senderID);
         updateProgress('city', 'sanFrancisco');
@@ -268,7 +275,7 @@ function receivedPostback(event) {
   var payload = event.postback.payload;
 
   if (payload === 'GET_STARTED') {
-    sendCityRequest(senderID);
+    getStarted(senderID);
   } else if (payload === 'SEND_CLUES') {
     sendClues(senderID);
   }
@@ -479,6 +486,33 @@ function sendRestartConfermation(recipientId) {
           content_type: "text",
           title: "No",
           payload:"CONTINUE"
+        },
+      ]
+    }
+  };
+
+  callSendAPI(messageData);
+}
+
+function getStarted(recipientId) {
+  var text = "Welcome to the scavenger hunt! To start over at any time, just " +
+    "let me know that you would like to 'start over.' Are you ready to start?";
+  var messageData = {
+    recipient: {
+      id: recipientId
+    },
+    message: {
+      text: text,
+      quick_replies: [
+        {
+          content_type: "text",
+          title: "Yes",
+          payload: "START"
+        },
+        {
+          content_type: "text",
+          title: "No",
+          payload:"HOLD_OFF"
         },
       ]
     }
