@@ -12,9 +12,9 @@ const
 
 var app = express();
 app.set('port', process.env.PORT || 8080);
-app.set('view engine', 'ejs');
+// app.set('view engine', 'ejs');
 app.use(bodyParser.json({ verify: verifyRequestSignature }));
-app.use(express.static('public'));
+// app.use(express.static('public'));
 
 const APP_SECRET = (process.env.MESSENGER_APP_SECRET) ?
   process.env.MESSENGER_APP_SECRET :
@@ -55,7 +55,7 @@ const PRIZE_LOCATIONS = {
   sanFrancisco: [
     {
       id: 1,
-      name: 'Golden Gate',
+      name: 'Golden Gate Park',
       coordinates: {
         lat: 37.7694,
         long: -122.4862
@@ -68,7 +68,7 @@ const PRIZE_LOCATIONS = {
     },
     {
       id: 2,
-      name: 'Presidio',
+      name: 'Presidio Park',
       coordinates: {
         lat: 37.7989,
         long: -122.4662
