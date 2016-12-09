@@ -205,6 +205,11 @@ function receivedMessage(event) {
         resetProgress();
         break;
 
+      case "CONTINUE":
+        sendTextMessage(senderID, "Great! Let's get back to it.");
+        checkProgress(senderID);
+        break;
+
       default:
         sendTextMessage(senderID, "I'm not quite sure what that means");
         sendCityRequest(senderID);
@@ -214,30 +219,11 @@ function receivedMessage(event) {
   }
 
   if (messageText) {
-    var clueArray;
-    if (PROGRESS.city && PROGRESS.prizeLocation)
-      PRIZE_LOCATIONS[PROGRESS.city].forEach(prizeLocation => {
-        if (prizeLocation.name === PROGRESS.prizeLocation)
-          clueArray = prizeLocation.clues;
-      });
 
     if (messageText.toLowerCase().includes('start over')) {
       sendRestartConfermation(senderID);
-    } else if (!PROGRESS.city) {
-      var preText = "I need to know which city you're in to get started.";
-      sendCityRequest(senderID, preText);
-    } else if (!PROGRESS.prizeLocation) {
-      var preText = "I am going to need to know your location " +
-        "so I can send you to your prize.";
-      sendLocationRequest(senderID, preText);
-    } else if (PROGRESS.clueIndex === 0) {
-      sendClueReadyRequest(senderID);
-    } else if (PROGRESS.clueIndex > 0 && PROGRESS.clueIndex < clueArray.length) {
-      sendNextClueReadyRequest(senderID);
-    } else if (PROGRESS.clueIndex === clueArray.length) {
-      sendTextMessage(senderID, "Send me a picture of your prize!");
     } else {
-      // sendTextMessage(senderID, PROGRESS.JSON.stringify);
+      checkProgress(senderID);
     }
 
   } else if (messageAttachments) {
@@ -256,6 +242,34 @@ function receivedPostback(event) {
       sendCityRequest(senderID);
   }
 
+}
+
+function checkProgress(senderID) {
+  var clueArray;
+  if (PROGRESS.city && PROGRESS.prizeLocation)
+    PRIZE_LOCATIONS[PROGRESS.city].forEach(prizeLocation => {
+      if (prizeLocation.name === PROGRESS.prizeLocation)
+        clueArray = prizeLocation.clues;
+    });
+
+  if (!PROGRESS.city) {
+    var preText = "I need to know which city you're in to get started.";
+    sendCityRequest(senderID, preText);
+  } else if (PROGRESS.city === 'other') {
+    sendTextMessage(senderID, "Sorry, you're not located in one of our " +
+      "active cities. Remember you can always type 'start over' to change" +
+      "your current city.");
+  } else if (!PROGRESS.prizeLocation) {
+    var preText = "I am going to need to know your location " +
+      "so I can send you to your prize.";
+    sendLocationRequest(senderID, preText);
+  } else if (PROGRESS.clueIndex === 0) {
+    sendClueReadyRequest(senderID);
+  } else if (PROGRESS.clueIndex > 0 && PROGRESS.clueIndex < clueArray.length) {
+    sendNextClueReadyRequest(senderID);
+  } else if (PROGRESS.clueIndex === clueArray.length) {
+    sendTextMessage(senderID, "Send me a picture of your prize!");
+  }
 }
 
 function sendCityRequest(recipientId, preText) {
