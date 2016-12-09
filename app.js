@@ -82,7 +82,12 @@ const PRIZE_LOCATIONS = {
       coordinates: {
         lat: 37.7694,
         long: -122.4862
-      }
+      },
+      clues: [
+        'Clue 1',
+        'Clue 2',
+        'Clue 3'
+      ]
     },
     {
       id: 2,
@@ -90,15 +95,20 @@ const PRIZE_LOCATIONS = {
       coordinates: {
         lat: 37.7989,
         long: -122.4662
-      }
+      },
+      clues: [
+        'Clue 1',
+        'Clue 2',
+        'Clue 3'
+      ]
     }
   ]
 };
 
 const PROGRESS = {
   city: null,
-  coordinates: false,
-  receivedClues: false,
+  prizeLocation: null,
+  clueIndex: 0,
   foundPrize: false
 };
 
@@ -108,8 +118,8 @@ function updateProgress(key, value) {
 
 function resetProgress() {
   PROGRESS.city = null;
-  PROGRESS.coordinates = false;
-  PROGRESS.receivedClues = false;
+  PROGRESS.prizeLocation = null;
+  PROGRESS.clueIndex = 0;
   PROGRESS.foundPrize = false;
 }
 
@@ -307,6 +317,15 @@ function receivedMessage(event) {
         updateProgress('city', 'other');
         break;
 
+      case 'READY_FOR_CLUE':
+        sendClues(senderID);
+        break;
+
+      case 'NOT_READY_FOR_CLUE':
+        sendTextMessage(senderID, "I'm ready when you're ready, let " +
+          "me know when you're ready for your clue.");
+        break;
+
       default:
         sendTextMessage(senderID, "I'm not quite sure what that means");
         sendCityRequest(senderID);
@@ -316,22 +335,34 @@ function receivedMessage(event) {
   }
 
   if (messageText) {
+    var clueArray;
+    if (PROGRESS.city && PROGRESS.prizeLocation)
+      PRIZE_LOCATIONS[PROGRESS.city].forEach(prizeLocation => {
+        if (prizeLocation.name === PROGRESS.prizeLocation)
+          clueArray = prizeLocation.clues;
+      });
 
-    if (!PROGRESS.city) {
-      sendTextMessage(senderID, "I need to know which city you're in to " +
-        "get started");
-      sendCityRequest(senderID);
-    } else if (!PROGRESS.coordinates) {
-      sendTextMessage(senderID, "I am going to need to know your location " +
-        "so I can send you to the closest prize location");
-      sendLocationRequest(senderID);
-    } else if (!PROGRESS.receivedClues) {
+    if (messageText.includes('start over')) {
+      sendRestartConfermation(senderID);
+    } else if (!PROGRESS.city) {
+      var preText = "I need to know which city you're in to get started.";
+      sendCityRequest(senderID, preText);
+    } else if (!PROGRESS.prizeLocation) {
+      var preText = "I am going to need to know your location " +
+        "so I can send you to your prize.";
+      sendLocationRequest(senderID, preText);
+    } else if (PROGRESS.clueIndex === 0) {
       sendClueReadyRequest(senderID);
+    } else if (PROGRESS.clueIndex > 0 && PROGRESS.clueIndex < clueArray.length) {
+      sendNextClueReadyRequest(senderID);
+    } else if (PROGRESS.clueIndex === clueArray.length) {
+      sendTextMessage(senderID, "Send me a picture of your prize!");
+    } else {
+      // sendTextMessage(senderID, PROGRESS.JSON.stringify);
     }
 
   } else if (messageAttachments) {
     processLocation(senderID, messageAttachments);
-    updateProgress('coordinates', true);
   }
 }
 
@@ -384,13 +415,19 @@ function receivedPostback(event) {
 
 }
 
-function sendCityRequest(recipientId) {
+function sendCityRequest(recipientId, preText) {
+  var text;
+  if (preText)
+    text = preText + " Which city are you located in?";
+  else
+    text = "Which city are you located in?";
+
   var messageData = {
     recipient: {
       id: recipientId
     },
     message: {
-      text: "Which city are you located in?",
+      text: text,
       quick_replies: [
         {
           content_type: "text",
@@ -419,13 +456,19 @@ function sendCityRequest(recipientId) {
   callSendAPI(messageData);
 }
 
-function sendLocationRequest(recipientId) {
+function sendLocationRequest(recipientId, preText) {
+  var text;
+  if (preText)
+    text = preText + " Share your location, so I can give you your first clue.";
+  else
+    text = "Share your location, so I can give you your first clue.";
+
   var messageData = {
     recipient: {
       id: recipientId
     },
     message: {
-      text: "Share your location, so I can give you your first clue.",
+      text: text,
       quick_replies: [
         {
           content_type: "location",
@@ -453,6 +496,7 @@ function processLocation(senderID, messageAttachments) {
   });
   sendTextMessage(senderID, `Head to ${prizeLocation} and let me know ` +
     "when you arrive so I can give you a set of clues.");
+  updateProgress('prizeLocation', prizeLocation);
 }
 
 function sendClueReadyRequest(recipientId) {
@@ -461,7 +505,7 @@ function sendClueReadyRequest(recipientId) {
       id: recipientId
     },
     message: {
-      text: "You made it? Are you sure you're ready for the clues?",
+      text: "You made it? Are you sure you're ready for your first clue?",
       quick_replies: [
         {
           content_type: "text",
@@ -478,6 +522,73 @@ function sendClueReadyRequest(recipientId) {
   };
 
   callSendAPI(messageData);
+}
+
+function sendNextClueReadyRequest(recipientId) {
+  var messageData = {
+    recipient: {
+      id: recipientId
+    },
+    message: {
+      text: "Are you sure you're ready for the next clue?",
+      quick_replies: [
+        {
+          content_type: "text",
+          title: "Yes",
+          payload: "READY_FOR_CLUE"
+        },
+        {
+          content_type: "text",
+          title: "No",
+          payload:"NOT_READY_FOR_CLUE"
+        },
+      ]
+    }
+  };
+
+  callSendAPI(messageData);
+}
+
+function sendRestartConfermation(recipientId) {
+  var messageData = {
+    recipient: {
+      id: recipientId
+    },
+    message: {
+      text: "Are you sure you want to restart?",
+      quick_replies: [
+        {
+          content_type: "text",
+          title: "Yes",
+          payload: "RESTART"
+        },
+        {
+          content_type: "text",
+          title: "No",
+          payload:"CONTINUE"
+        },
+      ]
+    }
+  };
+}
+
+function sendClues(recipientId) {
+  var clueArray;
+  PRIZE_LOCATIONS[PROGRESS.city].forEach(prizeLocation => {
+    if (prizeLocation.name === PROGRESS.prizeLocation)
+      clueArray = prizeLocation.clues;
+  });
+
+  if (PROGRESS.clueIndex === 0) {
+    sendTextMessage(recipientId, `Here's your first clue: ${clueArray[PROGRESS.clueIndex]}`);
+    PROGRESS.clueIndex ++;
+  } else if (PROGRESS.clueIndex === clueArray.length - 1) {
+    sendTextMessage(recipientId, `Here's your last clue: ${clueArray[PROGRESS.clueIndex]}`);
+    PROGRESS.clueIndex ++;
+  } else {
+    sendTextMessage(recipientId, `Here's your next clue: ${clueArray[PROGRESS.clueIndex]}`);
+    PROGRESS.clueIndex ++;
+  }
 }
 
 /*
