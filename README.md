@@ -112,3 +112,7 @@ Once a user finds a prize and messages the bot back with a picture, the bot will
 
 ##Caveats
 - Facebook Messenger Bots can only have basic access to a user's profile. They will not know if the user has posted a picture to social media. They also cannot post information to a user's timeline or Instagram account.
+- Bots can get users to share information; however, it can only be through the messenger platform.
+- This application relies on user input if they have found the prize (unreliable).
+  - Could use location to determine if user has truly found prize.
+- Why would user's be incentivized to share a picture of their prize if they have already gotten what they want?
