@@ -82,6 +82,16 @@ const PRIZE_LOCATIONS = {
   ]
 };
 
+function deleteFoundPrize(city, prizeLocation) {
+  var index = 0;
+  PRIZE_LOCATIONS[city].forEach(prizeLoc => {
+    if (prizeLoc.name === prizeLocation) return;
+    index ++;
+  });
+
+  PRIZE_LOCATIONS[PROGRESS.city].splice(index, 1);
+}
+
 const PROGRESS = {
   city: null,
   prizeLocation: null,
@@ -95,6 +105,12 @@ function updateProgress(key, value) {
 
 function resetProgress() {
   PROGRESS.city = null;
+  PROGRESS.prizeLocation = null;
+  PROGRESS.clueIndex = 0;
+  PROGRESS.foundPrize = false;
+}
+
+function resetWinner() {
   PROGRESS.prizeLocation = null;
   PROGRESS.clueIndex = 0;
   PROGRESS.foundPrize = false;
@@ -191,12 +207,25 @@ function receivedMessage(event) {
         break;
 
       case 'READY_FOR_CLUE':
+        sendCluePreview(senderID);
+        break;
+
+      case 'READY_FOR_NEXT_CLUE':
         sendClues(senderID);
         break;
 
       case 'NOT_READY_FOR_CLUE':
         sendTextMessage(senderID, "I'm ready when you're ready, let " +
           "me know when you're ready for your clue.");
+        break;
+
+      case "FOUND_PRIZE":
+        sharePrizePicture(senderID);
+        break;
+
+      case "HAVE_NO_PRIZE":
+        sendTextMessage(senderID, "I'm waiting, let me konw when you've found " +
+          "the prize.");
         break;
 
       case "RESTART":
@@ -239,7 +268,9 @@ function receivedPostback(event) {
   var payload = event.postback.payload;
 
   if (payload === 'GET_STARTED') {
-      sendCityRequest(senderID);
+    sendCityRequest(senderID);
+  } else if (payload === 'SEND_CLUES') {
+    sendClues(senderID);
   }
 
 }
@@ -268,7 +299,7 @@ function checkProgress(senderID) {
   } else if (PROGRESS.clueIndex > 0 && PROGRESS.clueIndex < clueArray.length) {
     sendNextClueReadyRequest(senderID);
   } else if (PROGRESS.clueIndex === clueArray.length) {
-    sendTextMessage(senderID, "Send me a picture of your prize!");
+    sendPrizeConfirmation(senderID);
   }
 }
 
@@ -362,7 +393,7 @@ function sendClueReadyRequest(recipientId) {
       id: recipientId
     },
     message: {
-      text: "You made it? Are you sure you're ready for your first clue?",
+      text: "You made it? Are you sure you're ready for more information?",
       quick_replies: [
         {
           content_type: "text",
@@ -392,12 +423,37 @@ function sendNextClueReadyRequest(recipientId) {
         {
           content_type: "text",
           title: "Yes",
-          payload: "READY_FOR_CLUE"
+          payload: "READY_FOR_NEXT_CLUE"
         },
         {
           content_type: "text",
           title: "No",
           payload:"NOT_READY_FOR_CLUE"
+        },
+      ]
+    }
+  };
+
+  callSendAPI(messageData);
+}
+
+function sendPrizeConfirmation(recipientId) {
+  var messageData = {
+    recipient: {
+      id: recipientId
+    },
+    message: {
+      text: "Is there a congrats in order, are you sure you found the prize?",
+      quick_replies: [
+        {
+          content_type: "text",
+          title: "Yes",
+          payload: "FOUND_PRIZE"
+        },
+        {
+          content_type: "text",
+          title: "No",
+          payload:"HAVE_NO_PRIZE"
         },
       ]
     }
@@ -432,6 +488,16 @@ function sendRestartConfermation(recipientId) {
 }
 
 function sendClues(recipientId) {
+  // var clueArray;
+  // PRIZE_LOCATIONS[PROGRESS.city].forEach(prizeLocation => {
+  //   if (prizeLocation.name === PROGRESS.prizeLocation)
+  //     clueArray = prizeLocation.clues;
+  // });
+  //
+  // clueArray.forEach(clue => {
+  //   sendTextMessage(recipientId, clue);
+  // });
+
   var clueArray;
   PRIZE_LOCATIONS[PROGRESS.city].forEach(prizeLocation => {
     if (prizeLocation.name === PROGRESS.prizeLocation)
@@ -439,15 +505,62 @@ function sendClues(recipientId) {
   });
 
   if (PROGRESS.clueIndex === 0) {
-    sendTextMessage(recipientId, `Here's your first clue: ${clueArray[PROGRESS.clueIndex]}`);
+    sendTextMessage(recipientId, `Here's your first clue: ${clueArray[PROGRESS.clueIndex]}. ` +
+      "Let me know when you're ready for the next one.");
     PROGRESS.clueIndex ++;
   } else if (PROGRESS.clueIndex === clueArray.length - 1) {
-    sendTextMessage(recipientId, `Here's your last clue: ${clueArray[PROGRESS.clueIndex]}`);
+    sendTextMessage(recipientId, `Here's your last clue: ${clueArray[PROGRESS.clueIndex]}. ` +
+      "Message back for the final instructions once you've found your prize.");
     PROGRESS.clueIndex ++;
   } else {
-    sendTextMessage(recipientId, `Here's your next clue: ${clueArray[PROGRESS.clueIndex]}`);
+    sendTextMessage(recipientId, `Here's your next clue: ${clueArray[PROGRESS.clueIndex]}. `  +
+      "Let me know when you're ready for the next one.");
     PROGRESS.clueIndex ++;
   }
+
+}
+
+function sendCluePreview(recipientId) {
+  var messageData = {
+    recipient: {
+      id: recipientId
+    },
+    message: {
+      attachment: {
+        type: "template",
+        payload: {
+          template_type:"generic",
+          elements: [
+            {
+              title:"Here\'s a Preview of your Prize",
+              item_url: "",
+              image_url: "http://www.clipartkid.com/images/72/back-all-clip-art-in-discovery-education-s-clip-art-gallery-created-by-7oGBtK-clipart.gif",
+              subtitle: "",
+              buttons:[
+                {
+                  type: "postback",
+                  title: "Send the Clues!",
+                  payload: "SEND_CLUES"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  };
+
+  callSendAPI(messageData);
+}
+
+function sharePrizePicture(recipientId) {
+  var
+    city = PROGRESS.city,
+    prizeLocation = PROGRESS.prizeLocation;
+
+  sendTextMessage(recipientId, "Congratulations! Share a picture of your prize!");
+  deleteFoundPrize(city, prizeLocation);
+  resetWinner();
 }
 
 function sendImageMessage(recipientId) {
