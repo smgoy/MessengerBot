@@ -4,4 +4,5 @@ pids
 node_modules
 .npm
 *.dat
-DS_store
+*.DS_store
+config

@@ -16,7 +16,7 @@ Things you will need:
 
 ###Webhook Setup
 
-Webhooks receive `POST` requests from Facebook (when the user interacts with your bot) and send `POST` requests back to Facebook (when your bot is responding to the user). I am running my webhook using Node and Express.
+Webhooks receive `POST` requests from Facebook (when the user sends messages to your bot) and subsequently send `POST` requests back to Facebook (when your bot responds to the user). I am running my webhook using Node and Express.
 
 ```javascript
 const express = require('express')
