@@ -2,6 +2,8 @@
 
 This application is a Facebook bot that manages a conversation with a user, directing them to a location where a prize is hidden.
 
+![](assets/FacebookBotDemo.gif)
+
 ##Set Up
 
 After signing up or linking your Facebook account to the [Facebook Developer page](https://developers.facebook.com/), follow the instructions to create a new app. Once you have created your application, I would suggest reading the [Getting Started Guide](https://developers.facebook.com/docs/messenger-platform/guides/quick-start).
@@ -11,18 +13,40 @@ Things you will need:
 - Webhook: I will go into more detail about setting up webhooks below.
 - Page Access Token: Which you can find under the Messenger Tab of Product Settings in the 'Token Generation' section.
 - App Secret: Which you can find under the Dashboard tab on your app's webpage.
-- Validation Token: A token that you choose.
-- Server URL: The URL where your webhook is running.
+- Validation Token: A token you choose to verify your application with your Facebook page.
 
 ###Webhook Setup
 
 Webhooks receive `POST` requests from Facebook (when the user sends messages to your bot) and subsequently send `POST` requests back to Facebook (when your bot responds to the user). I am running my webhook using Node and Express.
 
 ```javascript
-const express = require('express')
+const express = require('express');
+const bodyParser = require('body-parser');
+const crypto = require('crypto');
 
 var app = express();
 app.set('port', process.env.PORT || 8080);
+app.use(bodyParser.json({ verify: verifyRequestSignature }));
+
+function verifyRequestSignature(req, res, buf) {
+  var signature = req.headers["x-hub-signature"];
+
+  if (!signature) {
+    console.error("Couldn't validate the signature.");
+  } else {
+    var elements = signature.split('=');
+    var method = elements[0];
+    var signatureHash = elements[1];
+
+    var expectedHash = crypto.createHmac('sha1', APP_SECRET)
+                        .update(buf)
+                        .digest('hex');
+
+    if (signatureHash != expectedHash) {
+      throw new Error("Couldn't validate the request signature.");
+    }
+  }
+}
 ```
 
 Now, we are going to create a `/webhook` route which is written specifically to be authenticated by Facebook to send and receive `POST` requests.
@@ -37,6 +61,14 @@ app.get('/webhook', function(req, res) {
     console.error("Failed validation. Make sure the validation tokens match.");
     res.sendStatus(403);
   }
+});
+```
+
+Start up your servers
+
+```javascript
+app.listen(app.get('port'), function() {
+  console.log('Node app is running on port', app.get('port'));
 });
 ```
 
@@ -106,13 +138,42 @@ function updateProgress(key, value) {
 
 Additionally, the user has the option to start over at any point by typing in the words 'start over' and the application will call the `resetProgress()` function.
 
+###Conversation Loops
+
+The bot always knows where the user is in the scavenger hunt based on the user's PROGRESS object. During the conversation, if the user makes and accidental input or nonsensical input the bot will prompt the user with the information it needs to continue the user through the scavenger hunt. Every time the user sends a message, the bot will check the progress of that user to know which questions it needs to ask the user so it can gather the necessary information.
+
+```javascript
+function checkProgress(senderID) {
+  var clueArray;
+  if (PROGRESS.city && PROGRESS.prizeLocation)
+    PRIZE_LOCATIONS[PROGRESS.city].forEach(prizeLocation => {
+      if (prizeLocation.name === PROGRESS.prizeLocation)
+        clueArray = prizeLocation.clues;
+    });
+
+  if (!PROGRESS.city) {
+    var preText = "I need to know which city you're in to get started.";
+    sendCityRequest(senderID, preText);
+  } else if (PROGRESS.city === 'other') {
+    sendTextMessage(senderID, "Sorry, you're not located in one of our " +
+      "active cities. Remember you can always type 'start over' to change" +
+      "your current city.");
+  } else if (!PROGRESS.prizeLocation) {
+    var preText = "I am going to need to know your location " +
+      "so I can send you to your prize.";
+    sendLocationRequest(senderID, preText);
+  } else if (PROGRESS.clueIndex === 0) {
+    sendClueReadyRequest(senderID);
+  } else if (PROGRESS.clueIndex > 0 && PROGRESS.clueIndex < clueArray.length) {
+    sendNextClueReadyRequest(senderID);
+  } else if (PROGRESS.clueIndex === clueArray.length) {
+    sendPrizeConfirmation(senderID);
+  }
+}
+```
+
+With this `checkProgress()` function it ensures that the application will not break upon accidental or nonsensical user input.
+
 ###Game Completion
 
-Once a user finds a prize and messages the bot back with a picture, the bot will know that the prize has been found and can delete the associated location from the PRIZE_LOCATIONS object.
-
-##Caveats
-- Facebook Messenger Bots can only have basic access to a user's profile. They will not know if the user has posted a picture to social media. They also cannot post information to a user's timeline or Instagram account.
-- Bots can get users to share information; however, it can only be through the messenger platform.
-- This application relies on user input if they have found the prize (unreliable).
-  - Could use location to determine if user has truly found prize.
-- Why would user's be incentivized to share a picture of their prize if they have already gotten what they want?
+Once a user finds a prize and confirms that the prize has been found, the bot will know that the prize no longer exists and will delete the associated location from the PRIZE_LOCATIONS object. Additionally, the bot will call the `resetWinner()` function, which resets everything but the `city` key the PROGRESS object.
