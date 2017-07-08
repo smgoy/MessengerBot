@@ -1,10 +1,10 @@
-#Scavenger Hunt Facebook Messenger Bot
+# Scavenger Hunt Facebook Messenger Bot
 
 This application is a Facebook bot that manages a conversation with a user, directing them to a location where a prize is hidden.
 
 ![](assets/FacebookBotDemo.gif)
 
-##Set Up
+## Set Up
 
 After signing up or linking your Facebook account to the [Facebook Developer page](https://developers.facebook.com/), follow the instructions to create a new app. Once you have created your application, I would suggest reading the [Getting Started Guide](https://developers.facebook.com/docs/messenger-platform/guides/quick-start).
 
@@ -15,7 +15,7 @@ Things you will need:
 - App Secret: Which you can find under the Dashboard tab on your app's webpage.
 - Validation Token: A token you choose to verify your application with your Facebook page.
 
-###Webhook Setup
+### Webhook Setup
 
 Webhooks receive `POST` requests from Facebook (when the user sends messages to your bot) and subsequently send `POST` requests back to Facebook (when your bot responds to the user). I am running my webhook using Node and Express.
 
@@ -74,9 +74,9 @@ app.listen(app.get('port'), function() {
 
 Finally, you can host your webhook on Heroku or, for development, host it locally. Facebook needs a secure `HTTPS` protocol to validate the webhook. I used [ngrok](https://ngrok.com/) which will host files you run locally on their servers.
 
-##Scavenger Hunt Bot
+## Scavenger Hunt Bot
 
-###Data Storage
+### Data Storage
 
 My bot is simple, it doesn't query a database, but if it did, it would query a noSQL database with collections set up as such.
 
@@ -115,7 +115,7 @@ const PRIZE_LOCATIONS = {
 
 This object is organized by cities holding a reference to the location where prizes are hidden and the clues to get to the prize.
 
-###User Progress
+### User Progress
 
 The user's progress is kept track throughout the hunt so the bot knows where the user is in the hunt.
 
@@ -138,7 +138,7 @@ function updateProgress(key, value) {
 
 Additionally, the user has the option to start over at any point by typing in the words 'start over' and the application will call the `resetProgress()` function.
 
-###Conversation Loops
+### Conversation Loops
 
 The bot always knows where the user is in the scavenger hunt based on the user's PROGRESS object. During the conversation, if the user makes and accidental input or nonsensical input the bot will prompt the user with the information it needs to continue the user through the scavenger hunt. Every time the user sends a message, the bot will check the progress of that user to know which questions it needs to ask the user so it can gather the necessary information.
 
@@ -174,6 +174,6 @@ function checkProgress(senderID) {
 
 With this `checkProgress()` function it ensures that the application will not break upon accidental or nonsensical user input.
 
-###Game Completion
+### Game Completion
 
 Once a user finds a prize and confirms that the prize has been found, the bot will know that the prize no longer exists and will delete the associated location from the PRIZE_LOCATIONS object. Additionally, the bot will call the `resetWinner()` function, which resets everything but the `city` key the PROGRESS object.
